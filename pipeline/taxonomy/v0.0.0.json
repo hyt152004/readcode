@@ -1,0 +1,89 @@
+{
+  "version": "0.0.0",
+  "createdAt": "2026-10-31",
+  "labels": [
+    "backend.concurrency.race_conditions",
+    "backend.concurrency.locking_and_lock_ordering",
+    "backend.concurrency.deadlocks",
+    "backend.concurrency.thread_and_worker_pools",
+    "backend.concurrency.async_await_pitfalls",
+    "backend.concurrency.atomic_operations",
+    "backend.concurrency.shared_state_in_request_handlers",
+
+    "backend.resilience.timeouts",
+    "backend.resilience.retries_and_backoff",
+    "backend.resilience.circuit_breakers",
+    "backend.resilience.rate_limiting",
+    "backend.resilience.graceful_degradation",
+    "backend.resilience.graceful_shutdown",
+
+    "backend.data.transactions_and_isolation_levels",
+    "backend.data.n_plus_one_queries",
+    "backend.data.connection_pooling",
+    "backend.data.migrations",
+    "backend.data.orm_pitfalls",
+    "backend.data.pagination",
+    "backend.data.optimistic_vs_pessimistic_locking",
+
+    "backend.caching.cache_invalidation",
+    "backend.caching.ttls_and_expiry",
+    "backend.caching.cache_stampedes",
+    "backend.caching.cache_aside_vs_write_through",
+    "backend.caching.stale_reads",
+
+    "backend.api.rest_design",
+    "backend.api.request_validation",
+    "backend.api.idempotency",
+    "backend.api.versioning",
+    "backend.api.status_codes_and_error_responses",
+    "backend.api.serialization_and_deserialization",
+
+    "backend.messaging.queues_and_consumers",
+    "backend.messaging.at_least_once_delivery",
+    "backend.messaging.deduplication",
+    "backend.messaging.message_ordering",
+    "backend.messaging.dead_letter_queues",
+    "backend.messaging.backpressure",
+
+    "backend.errors.error_propagation",
+    "backend.errors.error_wrapping_and_context",
+    "backend.errors.swallowed_errors",
+    "backend.errors.cleanup_on_error_paths",
+    "backend.errors.panics_and_exceptions_at_boundaries",
+
+    "backend.resources.memory_leaks",
+    "backend.resources.file_and_socket_handle_leaks",
+    "backend.resources.streaming_large_payloads",
+    "backend.resources.unbounded_buffers",
+    "backend.resources.context_cancellation",
+
+    "backend.security.authentication",
+    "backend.security.authorization_checks",
+    "backend.security.sql_injection",
+    "backend.security.input_sanitization",
+    "backend.security.secrets_handling",
+    "backend.security.session_and_token_handling",
+
+    "backend.observability.structured_logging",
+    "backend.observability.metrics",
+    "backend.observability.tracing",
+    "backend.observability.health_checks",
+    "backend.observability.logging_sensitive_data",
+
+    "backend.config.configuration_loading",
+    "backend.config.feature_flags",
+    "backend.config.environment_specific_behaviour",
+    "backend.config.defaults_and_validation",
+
+    "backend.testing.unit_test_design",
+    "backend.testing.mocking_and_fakes",
+    "backend.testing.flaky_tests",
+    "backend.testing.integration_tests",
+
+    "backend.design.dependency_injection",
+    "backend.design.layering",
+    "backend.design.interface_design",
+    "backend.design.coupling_and_cohesion",
+    "backend.design.code_duplication"
+  ]
+}
