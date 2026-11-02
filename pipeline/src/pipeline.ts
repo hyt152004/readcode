@@ -20,7 +20,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { JobPosting, WeightVector, Taxonomy, Classification } from "../../shared/types.js";
+import { Taxonomy, type Classification } from "../../shared/types.js";
 import { readFileSync } from "node:fs";
 import { classify } from "./classifier.js";
 
@@ -39,8 +39,8 @@ const TAXONOMY_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..
 async function pipeline(jobDescription: string) {
     // let jobPosting: JobPosting = parseJobDescription(jobDescription);
 
-    const taxonomy: Taxonomy = JSON.parse(readFileSync(path.join(TAXONOMY_DIR, `v${TAXONOMY_VERSION}.json`), "utf8"));
-    let weights: Classification = await classify(jobDescription, taxonomy);
+    const taxonomy = Taxonomy.parse(JSON.parse(readFileSync(path.join(TAXONOMY_DIR, `v${TAXONOMY_VERSION}.json`), "utf8")));
+    const weights: Classification = await classify(jobDescription, taxonomy);
 
     // print non-zero weights, highest first
     console.log(`Weights (taxonomy v${weights.taxonomyVersion}):`);
