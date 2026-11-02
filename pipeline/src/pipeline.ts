@@ -53,9 +53,14 @@ async function pipeline(jobDescription: string) {
     return weights;
 }
 
-// to run: npm run pipeline
+// to run: npm run pipeline -- <job_description_file.json>
 async function main() {
-    const file = path.join(JOB_DESCRIPTION_DIR, "lyft_backend_intern.json");
+    const fileName = process.argv[2];
+    if (!fileName) {
+        console.error("Usage: npm run pipeline -- <job_description_file.json>");
+        process.exit(1);
+    }
+    const file = path.join(JOB_DESCRIPTION_DIR, fileName);
     const { description } = JSON.parse(await readFile(file, "utf8")) as { description: string };
 
     await pipeline(description)
