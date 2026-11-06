@@ -67,3 +67,15 @@ export interface Example {
   key: ExampleKey;
   files: { path: string; content: string }[];
 }
+///////////
+// Plan (per job posting, computed once)
+///////////
+export const Plan = z.object({
+  posting: z.string(),                       // job description file name
+  taxonomyVersion: z.string(),
+  createdAt: z.string(),
+  weights: z.record(LabelId, z.number()),    // classifier output, non-zero only
+  targets: z.record(LabelId, z.number().int().positive()),  // chosen topics only
+  shares: z.record(LabelId, z.number()),     // importance of each chosen topic, sums to 1
+});
+export type Plan = z.infer<typeof Plan>;

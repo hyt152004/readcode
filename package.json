@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "pipeline": "tsx --env-file-if-exists=.env pipeline/src/pipeline.ts"
+    "pipeline": "node --env-file-if-exists=.env pipeline/src/pipeline.ts"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",

@@ -29,7 +29,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
-import type { Classification, LabelId, Taxonomy } from "../../shared/types.js";
+import type { Classification, LabelId, Taxonomy } from "../../shared/types.ts";
 
 const MODEL = "claude-opus-5-5";
 
