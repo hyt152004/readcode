@@ -71,11 +71,10 @@ export interface Example {
 // Plan (per job posting, computed once)
 ///////////
 export const Plan = z.object({
-  posting: z.string(),                       // job description file name
   taxonomyVersion: z.string(),
-  createdAt: z.string(),
-  weights: z.record(LabelId, z.number()),    // classifier output, non-zero only
-  targets: z.record(LabelId, z.number().int().positive()),  // chosen topics only
-  shares: z.record(LabelId, z.number()),     // importance of each chosen topic, sums to 1
+  targets: z.array(z.object({
+    label: LabelId,
+    count: z.number().int().positive(),      // examples to make for this topic
+  })),
 });
 export type Plan = z.infer<typeof Plan>;

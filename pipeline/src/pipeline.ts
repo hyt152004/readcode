@@ -35,14 +35,9 @@ const EXAMPLES_PER_POSTING = 20;
 const MIN_PER_TOPIC = 2;
 const SHARE_POWER = 2;
 
-// what plan() produces and pipeline() consumes
-type PlanResult = {
-    taxonomyVersion: string;
-    targets: { label: string; count: number }[];
-};
 
 // use a job description file to create a plan file
-async function plan(jobDescription: string): Promise<PlanResult> {
+async function plan(jobDescription: string): Promise<Plan> {
     const taxonomy: Taxonomy = JSON.parse(readFileSync(path.join(TAXONOMY_DIR, `v${TAXONOMY_VERSION}.json`), "utf8"));
 
     // 1. classify
@@ -96,7 +91,7 @@ function apportion(weights: number[]): number[] {
     return counts;
 }
 
-async function pipeline(plan: PlanResult) {
+async function pipeline(plan: Plan) {
     // TODO: count bank, compute shortfall, generate an example for the top topic
     console.log(`Running pipeline with ${plan.targets.length} topics (taxonomy v${plan.taxonomyVersion})`);
 }
@@ -119,7 +114,7 @@ async function main() {
 
     // --use_plan: skip planning, run the pipeline on a saved plan
     if (values.use_plan) {
-        const saved: PlanResult = JSON.parse(await readFile(values.use_plan, "utf8"));
+        const saved = Plan.parse(JSON.parse(await readFile(values.use_plan, "utf8")));
         await pipeline(saved);
         return;
     }
