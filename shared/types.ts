@@ -62,11 +62,20 @@ export const ExampleKey = z.object({
 });
 export type ExampleKey = z.infer<typeof ExampleKey>;
 
-export interface Example {
-  public: ExamplePublic;
-  key: ExampleKey;
-  files: { path: string; content: string }[];
-}
+// a code file of the example, written under src/<path>
+export const SourceFile = z.object({
+  path: z.string(),                   // relative, e.g. "fares/calculator.ts"
+  content: z.string(),
+});
+export type SourceFile = z.infer<typeof SourceFile>;
+
+export const Example = z.object({
+  public: ExamplePublic,
+  key: ExampleKey,
+  files: z.array(SourceFile).min(1),
+});
+export type Example = z.infer<typeof Example>;
+
 ///////////
 // Plan (per job posting, computed once)
 ///////////

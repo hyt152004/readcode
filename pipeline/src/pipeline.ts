@@ -24,9 +24,9 @@ import { parseArgs } from "node:util";
 import { Plan, Taxonomy, type Classification } from "../../shared/types.ts";
 import { readFileSync } from "node:fs";
 import { classify } from "./classifier.ts";
+import { generateExample, writeExample } from "./exampleGenerator.ts";
 
 const PIPELINE_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-const JOB_DESCRIPTION_DIR = path.join(PIPELINE_DIR, "jobDescription");
 const TAXONOMY_DIR = path.join(PIPELINE_DIR, "taxonomy");
 
 const TAXONOMY_VERSION = "0.1.0";
@@ -91,31 +91,45 @@ function apportion(weights: number[]): number[] {
     return counts;
 }
 
-async function pipeline(plan: Plan) {
-    // TODO: count bank, compute shortfall, generate an example for the top topic
-    console.log(`Running pipeline with ${plan.targets.length} topics (taxonomy v${plan.taxonomyVersion})`);
+// exampleOut: folder to write the generated example to. Without it, only report the topic.
+async function pipeline(plan: Plan, exampleOut?: string) {
+    // TODO: count bank, compute shortfall; for now take the top target
+    const topic = plan.targets[0].label;
+    console.log(`going to create an example for ${topic}`);
+    if (!exampleOut) return;
+
+    const taxonomy = Taxonomy.parse(JSON.parse(readFileSync(path.join(TAXONOMY_DIR, `v${plan.taxonomyVersion}.json`), "utf8")));
+    const example = await generateExample(topic, taxonomy);
+    await writeExample(example, exampleOut);
+    console.log(`Example written to ${exampleOut}`);
 }
 
 // standard:     node pipeline/src/pipeline.ts <job_description_file.txt>                          plan → pipeline
 // plan only:    node pipeline/src/pipeline.ts <job_description_file.txt> --create_plan <out.json>  plan → write file
 // reuse a plan: node pipeline/src/pipeline.ts --use_plan <plan.json>                               read file → pipeline
+// add --example_out <dir> to standard or --use_plan to generate the example into <dir> (public.json, key.json, src/)
 async function main() {
     const { values, positionals } = parseArgs({
         options: { create_plan: { type: "string" },
-                   use_plan:    { type: "string" } },
+                   use_plan:    { type: "string" },
+                   example_out: { type: "string" } },
         allowPositionals: true,
     });
-    const usage = "Usage: node pipeline/src/pipeline.ts <job_description_file.txt> [--create_plan <out.json>] | --use_plan <plan.json>";
+    const usage = "Usage: node pipeline/src/pipeline.ts <job_description_file.txt> [--create_plan <out.json>] | --use_plan <plan.json>  [--example_out <dir>]";
 
     if (values.create_plan && values.use_plan) {
         console.error("--create_plan and --use_plan can't be used together.\n" + usage);
+        process.exit(1);
+    }
+    if (values.create_plan && values.example_out) {
+        console.error("--example_out does nothing with --create_plan (no pipeline run).\n" + usage);
         process.exit(1);
     }
 
     // --use_plan: skip planning, run the pipeline on a saved plan
     if (values.use_plan) {
         const saved = Plan.parse(JSON.parse(await readFile(values.use_plan, "utf8")));
-        await pipeline(saved);
+        await pipeline(saved, values.example_out);
         return;
     }
 
@@ -124,7 +138,7 @@ async function main() {
         console.error(usage);
         process.exit(1);
     }
-    const description = await readFile(path.join(JOB_DESCRIPTION_DIR, jobDescriptionFile), "utf8");
+    const description = await readFile(jobDescriptionFile, "utf8");
     const result = await plan(description);
 
     // --create_plan: save the plan and stop
@@ -135,7 +149,7 @@ async function main() {
     }
 
     // standard: plan, then pipeline
-    await pipeline(result);
+    await pipeline(result, values.example_out);
 }
 
 main().catch((err) => {

@@ -30,6 +30,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
 import type { Classification, LabelId, Taxonomy } from "../../shared/types.ts";
+import { logUsage } from "./usage.ts";
 
 const MODEL = "claude-opus-5-5";
 
@@ -73,6 +74,8 @@ export async function classify(jobDescription: string, taxonomy: Taxonomy): Prom
       },
     ],
   });
+
+  logUsage("classify", response.usage);
 
   if (response.stop_reason === "refusal") {
     throw new Error(`Classification refused (${response.stop_details?.category ?? "unknown"})`);
