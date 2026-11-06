@@ -20,7 +20,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { JobPosting, WeightVector, Taxonomy, Classification } from "../../shared/types.js";
+import { Taxonomy, type Classification } from "../../shared/types.js";
 import { readFileSync } from "node:fs";
 import { classify } from "./classifier.js";
 
@@ -39,8 +39,8 @@ const TAXONOMY_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..
 async function pipeline(jobDescription: string) {
     // let jobPosting: JobPosting = parseJobDescription(jobDescription);
 
-    const taxonomy: Taxonomy = JSON.parse(readFileSync(path.join(TAXONOMY_DIR, `v${TAXONOMY_VERSION}.json`), "utf8"));
-    let weights: Classification = await classify(jobDescription, taxonomy);
+    const taxonomy = Taxonomy.parse(JSON.parse(readFileSync(path.join(TAXONOMY_DIR, `v${TAXONOMY_VERSION}.json`), "utf8")));
+    const weights: Classification = await classify(jobDescription, taxonomy);
 
     // print non-zero weights, highest first
     console.log(`Weights (taxonomy v${weights.taxonomyVersion}):`);
@@ -53,9 +53,14 @@ async function pipeline(jobDescription: string) {
     return weights;
 }
 
-// to run: npm run pipeline
+// to run: npm run pipeline -- <job_description_file.json>
 async function main() {
-    const file = path.join(JOB_DESCRIPTION_DIR, "lyft_backend_intern.json");
+    const fileName = process.argv[2];
+    if (!fileName) {
+        console.error("Usage: npm run pipeline -- <job_description_file.json>");
+        process.exit(1);
+    }
+    const file = path.join(JOB_DESCRIPTION_DIR, fileName);
     const { description } = JSON.parse(await readFile(file, "utf8")) as { description: string };
 
     await pipeline(description)
