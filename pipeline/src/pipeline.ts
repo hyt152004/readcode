@@ -16,54 +16,140 @@
 // 12. human review
 // 13. add to the bank and update the counts.
 
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseArgs } from "node:util";
 
-import { Taxonomy, type Classification } from "../../shared/types.js";
+import { Plan, Taxonomy, type Classification } from "../../shared/types.ts";
 import { readFileSync } from "node:fs";
-import { classify } from "./classifier.js";
+import { classify } from "./classifier.ts";
+import { generateExample, writeExample } from "./exampleGenerator.ts";
 
-const JOB_DESCRIPTION_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "jobDescription");
-const TAXONOMY_VERSION = "0.0.0";
-const TAXONOMY_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "taxonomy");
+const PIPELINE_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+const TAXONOMY_DIR = path.join(PIPELINE_DIR, "taxonomy");
 
-// function parseJobDescription(jobDescription: String): JobPosting {
-//     // call the LLM to parse the string and store it as JobPosting object
-//     // return the object
+const TAXONOMY_VERSION = "0.1.0";
 
-//     return None;
-// }
+const EXAMPLES_PER_POSTING = 20;
+const MIN_PER_TOPIC = 2;
+const SHARE_POWER = 2;
 
 
-async function pipeline(jobDescription: string) {
-    // let jobPosting: JobPosting = parseJobDescription(jobDescription);
+// use a job description file to create a plan file
+async function plan(jobDescription: string): Promise<Plan> {
+    const taxonomy: Taxonomy = JSON.parse(readFileSync(path.join(TAXONOMY_DIR, `v${TAXONOMY_VERSION}.json`), "utf8"));
 
-    const taxonomy = Taxonomy.parse(JSON.parse(readFileSync(path.join(TAXONOMY_DIR, `v${TAXONOMY_VERSION}.json`), "utf8")));
-    const weights: Classification = await classify(jobDescription, taxonomy);
+    // 1. classify
+    const classification = await classify(jobDescription, taxonomy);
 
-    // print non-zero weights, highest first
-    console.log(`Weights (taxonomy v${weights.taxonomyVersion}):`);
-    taxonomy.labels
-        .map((label, i) => ({ label, weight: weights.weights[i] }))
-        .filter(({ weight }) => weight > 0)
-        .sort((a, b) => b.weight - a.weight)
-        .forEach(({ label, weight }) => console.log(`  ${weight.toFixed(2)}  ${label}`));
+    // 2. rank concepts
+    const ranked = taxonomy.labels
+        .map((label, i) => ({ label, weight: classification.weights[i], i }))
+        .filter((r) => r.weight > 0)
+        .sort((a, b) => b.weight - a.weight || a.i - b.i);
 
-    return weights;
+    
+    // 3. Keep only the topics that will get examples.
+    let chosen = ranked.slice(0, Math.floor(EXAMPLES_PER_POSTING / MIN_PER_TOPIC));
+    let counts = apportion(chosen.map((r) => r.weight));
+    //    If any topic would get fewer than MIN_PER_TOPIC, drop the weakest and apportion again.
+    while (chosen.length > 1 && Math.min(...counts) < MIN_PER_TOPIC) {
+        chosen = chosen.slice(0, -1);
+        counts = apportion(chosen.map((r) => r.weight));
+    }
+
+    return {
+        taxonomyVersion: taxonomy.version,
+        targets: chosen.map((r, j) => ({ label: r.label, count: counts[j] })),
+    };
 }
 
-// to run: npm run pipeline -- <job_description_file.json>
+function apportion(weights: number[]): number[] {
+    // 4. expontentialize the  weights - 0.6 is worth more than double 0.3, (0.6)^2 vs (0.3)^2 is a more accurate difference. '2' is a parameter
+    const powered = weights.map((w) => w ** SHARE_POWER);
+
+    // 5. calculate shares, the fraction each concept represents
+    const total = powered.reduce((s, x) => s + x, 0);
+    const shares = powered.map((x) => x / total);   // sums to 1
+
+    // 6. apportion 20 examples to the concepts based on share. apportion is required because the true share fraction is not a discrete number of examples.
+    // e.g. ideal    = 2.8,  3.7,  3.5
+    //      counts   = 2,    3,    3
+    //      leftover = 0.8 + 0.7 + 0.5 = 2
+    //      final    = 3,    4,    3
+    const ideal = shares.map((s) => s * EXAMPLES_PER_POSTING);   // e.g. 3.6
+    const counts = ideal.map(Math.floor);                         // 3
+    const leftover = EXAMPLES_PER_POSTING - counts.reduce((s, c) => s + c, 0);
+
+    ideal
+        .map((q, i) => ({ i, remainder: q - Math.floor(q) }))
+        .sort((a, b) => b.remainder - a.remainder || a.i - b.i) // sort by highest remainder
+        .slice(0, leftover)
+        .forEach(({ i }) => counts[i]++);
+
+    return counts;
+}
+
+// exampleOut: folder to write the generated example to. Without it, only report the topic.
+async function pipeline(plan: Plan, exampleOut?: string) {
+    // TODO: count bank, compute shortfall; for now take the top target
+    const topic = plan.targets[0].label;
+    console.log(`going to create an example for ${topic}`);
+    if (!exampleOut) return;
+
+    const taxonomy = Taxonomy.parse(JSON.parse(readFileSync(path.join(TAXONOMY_DIR, `v${plan.taxonomyVersion}.json`), "utf8")));
+    const example = await generateExample(topic, taxonomy);
+    await writeExample(example, exampleOut);
+    console.log(`Example written to ${exampleOut}`);
+}
+
+// standard:     node pipeline/src/pipeline.ts <job_description_file.txt>                          plan → pipeline
+// plan only:    node pipeline/src/pipeline.ts <job_description_file.txt> --create_plan <out.json>  plan → write file
+// reuse a plan: node pipeline/src/pipeline.ts --use_plan <plan.json>                               read file → pipeline
+// add --example_out <dir> to standard or --use_plan to generate the example into <dir> (public.json, key.json, src/)
 async function main() {
-    const fileName = process.argv[2];
-    if (!fileName) {
-        console.error("Usage: npm run pipeline -- <job_description_file.json>");
+    const { values, positionals } = parseArgs({
+        options: { create_plan: { type: "string" },
+                   use_plan:    { type: "string" },
+                   example_out: { type: "string" } },
+        allowPositionals: true,
+    });
+    const usage = "Usage: node pipeline/src/pipeline.ts <job_description_file.txt> [--create_plan <out.json>] | --use_plan <plan.json>  [--example_out <dir>]";
+
+    if (values.create_plan && values.use_plan) {
+        console.error("--create_plan and --use_plan can't be used together.\n" + usage);
         process.exit(1);
     }
-    const file = path.join(JOB_DESCRIPTION_DIR, fileName);
-    const { description } = JSON.parse(await readFile(file, "utf8")) as { description: string };
+    if (values.create_plan && values.example_out) {
+        console.error("--example_out does nothing with --create_plan (no pipeline run).\n" + usage);
+        process.exit(1);
+    }
 
-    await pipeline(description)
+    // --use_plan: skip planning, run the pipeline on a saved plan
+    if (values.use_plan) {
+        const saved = Plan.parse(JSON.parse(await readFile(values.use_plan, "utf8")));
+        await pipeline(saved, values.example_out);
+        return;
+    }
+
+    const jobDescriptionFile = positionals[0];
+    if (!jobDescriptionFile) {
+        console.error(usage);
+        process.exit(1);
+    }
+    const description = await readFile(jobDescriptionFile, "utf8");
+    const result = await plan(description);
+
+    // --create_plan: save the plan and stop
+    if (values.create_plan) {
+        await writeFile(values.create_plan, JSON.stringify(result, null, 2) + "\n");
+        console.log(`Plan written to ${values.create_plan}`);
+        return;
+    }
+
+    // standard: plan, then pipeline
+    await pipeline(result, values.example_out);
 }
 
 main().catch((err) => {
