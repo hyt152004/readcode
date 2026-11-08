@@ -4,7 +4,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   outputFileTracingRoot: path.join(__dirname, ".."),        // allow files outside web/
-  outputFileTracingIncludes: { "/**": ["../examples/**/*"] }, // bundle the examples
+  outputFileTracingIncludes: { "/**": ["../examples/**/*", "../twilio_example/**/*"] }, // bundle the examples
   experimental: {
     agentFeedback: true,
   },
