@@ -1,0 +1,52 @@
+{
+  "id": "a5aa1ccc-e72a-4106-8de1-4e1ff01d30f5",
+  "title": "Task Resource API: PUT Semantics, Conditional Requests, and Status Codes",
+  "createdAt": "2026-11-06T07:57:53.786Z",
+  "durationMinutes": 14,
+  "language": "TypeScript",
+  "questions": [
+    {
+      "prompt": "A task currently has version 3 and assigneeId \"u_42\". A client GETs it (ETag \"v3\") and sends PUT /v1/projects/p1/tasks/{id} with If-Match: \"v3\" and the full body {\"title\":\"Fix login\",\"description\":null,\"assigneeId\":null,\"status\":\"open\"}, intending to unassign the task. What is the outcome?",
+      "choices": [
+        "200 OK; the stored task has assigneeId null, version 4, and the response carries ETag \"v4\"",
+        "422 Unprocessable Entity, because assigneeId must be a string",
+        "200 OK; the stored task still has assigneeId \"u_42\", version 4, and ETag \"v4\"",
+        "412 Precondition Failed, because the body differs from the stored representation"
+      ]
+    },
+    {
+      "prompt": "A client sends PUT to an existing task (status \"open\") without an If-Match header and with body {\"status\":\"archived\"}. What does the server respond with?",
+      "choices": [
+        "428 Precondition Required",
+        "422 Unprocessable Entity listing the invalid status",
+        "412 Precondition Failed",
+        "409 Conflict for an invalid status transition"
+      ]
+    },
+    {
+      "prompt": "Clients A and B both GET the same task at version 5 (ETag \"v5\"). A sends a valid PUT with If-Match: \"v5\" and it completes first; then B sends a valid PUT with If-Match: \"v5\". What happens to B's request?",
+      "choices": [
+        "200 OK; B's values overwrite A's (last write wins) and the version becomes 7",
+        "409 Conflict, because the status transition is checked against A's version",
+        "200 OK with version 6, since both requests were based on version 5",
+        "412 Precondition Failed; A's changes are preserved and B must re-read the task"
+      ]
+    },
+    {
+      "prompt": "Which change best fixes the problem in the first question while keeping the endpoint consistent with REST semantics?",
+      "choices": [
+        "Replace the `??` operators in the PUT handler with `||` so null values are handled",
+        "Make PUT a full replacement: require every mutable field to be present (422 otherwise) and assign the body values directly, including null; offer PATCH for partial updates",
+        "Return 204 No Content from PUT instead of 200 so clients re-fetch the task",
+        "Have clients DELETE the task and POST it again without an assigneeId"
+      ]
+    }
+  ],
+  "taxonomyVersion": "0.1.0",
+  "concepts": [
+    "backend.api.rest_design",
+    "backend.api.status_codes_and_error_responses",
+    "backend.data.optimistic_vs_pessimistic_locking",
+    "backend.api.request_validation"
+  ]
+}
